@@ -2,12 +2,17 @@ import express from "express";
 import userModel from "../models/User";
 import dataModel from "../models/Data";
 import otpModel from "../models/OTP";
+import NewsModel from "../models/News";
 import getMessageHTML from "../assets/otpEmail";
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import aws from "aws-sdk";
 import * as userValidation from "../validation/user";
+import NewsAPI from "newsapi";
+import OpenAI from "openai";
+
+const newsapi = new NewsAPI("8c4fe58fb02945eb9469d8859addd041");
 
 aws.config.update({
   accessKeyId: process.env.AWS_ACCESSKEY,
@@ -235,6 +240,52 @@ router.post("/otpsend", async (req: Request, res: Response) => {
     res.status(400).send(err);
     console.log(err);
   }
+});
+
+router.get("/news", async (req: Request, res: Response) => {
+  // check if present in DB
+  const returnedData = await NewsModel.find({ time: { $gt: new Date(Date.now() - 60 * 60 * 1000) } });
+  if (returnedData.length > 0) {
+    res.send(returnedData[0].data);
+    return;
+  }
+
+  // fetch the news api
+  const result = await newsapi.v2.topHeadlines({
+    category: "business",
+    language: "en",
+    country: "in",
+  });
+
+  // console.log(result);
+  const descriptions = result.articles.map((e) => e.description) as string[];
+
+  // get curated data form openai
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const prompt: string = `Summarize the following news article descriptions in a better way and combine them in a single paragraph then devide them in bullet points.
+    Add more context to the points and also add the probable circumstance or impact for this in the same point itself.`;
+
+  const chatCompletion = await openai.chat.completions.create({
+    messages: [
+      {
+        role: "user",
+        content: prompt + " \n".concat(descriptions.join("\n ")),
+      },
+    ],
+    model: "gpt-3.5-turbo-16k-0613", // gpt-3.5-turbo-16k-0613  gpt-3.5-turbo
+  });
+
+  // store data in Mongo DB
+  const data = new NewsModel({
+    data: chatCompletion.choices[0].message.content,
+  });
+  await data.save();
+
+  // send the generated data
+  res.send(chatCompletion.choices[0].message.content);
 });
 
 export default router;
