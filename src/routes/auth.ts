@@ -24,12 +24,8 @@ const ses = new aws.SES({ apiVersion: "2010-12-01" });
 const router = express.Router();
 
 router.post("/signup", async (req: Request, res: Response) => {
-  console.log(req.body);
-
-  // VALIDATION
   const { error } = userValidation.checkSignup(req.body);
   if (error != null) {
-    console.log("validation log: " + error);
     return res.send({
       code: "validationFalse",
       message: error.details[0].message,
@@ -38,19 +34,15 @@ router.post("/signup", async (req: Request, res: Response) => {
 
   // Check OTP
   const otpFromDB = await otpModel.find({ email: req.body.email });
-  console.log("OTP From DB : " + otpFromDB);
   if (otpFromDB[otpFromDB.length - 1].otp !== req.body.otp) return res.send("OTP did not match");
 
-  // CHECKING IF EMAIL ALREADY EXISTS
   const emailExist = await userModel.findOne({ email: req.body.email });
-  console.log("Email exists log: " + emailExist);
   if (emailExist) return res.status(400).send("Email already exists");
 
-  // HASH PASSWORDS
+  // hash password
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
-  // ADD USER
   const user = new userModel({
     name: req.body.name,
     email: req.body.email,
@@ -58,7 +50,6 @@ router.post("/signup", async (req: Request, res: Response) => {
   });
   try {
     const saveUser = await user.save();
-    console.log("Signup success log: " + saveUser);
     res.send({
       code: "userCreated",
       message: {
@@ -73,19 +64,16 @@ router.post("/signup", async (req: Request, res: Response) => {
 });
 
 router.post("/login", async (req: Request, res: Response) => {
-  // VALIDATION
   const { error } = userValidation.checkLogin(req.body);
   if (error != null) {
     return res.status(400).send({ code: "validationFalse", message: error.details[0].message });
   }
 
-  console.log("req.body ", req.body);
-
   const userEmail = req.body.email;
 
   let userByEmail: { _id: string; password: string; name: string } | undefined = undefined;
 
-  // CHECKING IS EMAIL ALREADY EXISTS
+  // check if email already exists
   try {
     userByEmail = await userModel.findOne({ email: userEmail });
   } catch (e) {
@@ -94,37 +82,28 @@ router.post("/login", async (req: Request, res: Response) => {
 
   if (!userByEmail) return res.status(400).send("Email does not exist");
 
-  // HASH PASSWORDS
+  // hash passwords
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(req.body.password, salt);
 
-  // VALID PASSWORD
   const validPass = await bcrypt.compare(req.body.password, userByEmail.password);
   if (!validPass) return res.status(400).send("Invalid password");
 
-  // SEND JWT LOGIN TOKENS
   const token = jwt.sign({ id: userByEmail._id, name: userByEmail.name }, process.env.SECRET_JWT_TOKEN);
   return res.header("auth-token", token).send({
     code: "Loggedin",
     token: token,
     user: { id: userByEmail._id, name: userByEmail.name },
-    //flag22
   });
-
-  // res.send('Logged in!!!')
 });
 
 router.post("/save", async (req: Request, res: Response) => {
-  console.log(req.body);
-
-  // VERIFY TOKEN
-  let token = req.body.token;
+  let { token } = req.body;
 
   if (!token) return res.status(400).send({ code: "tokenNotReceived", message: token });
 
   try {
     const verified = jwt.verify(token, process.env.SECRET_JWT_TOKEN) as { id: string };
-    console.log("verified log: " + JSON.stringify(verified));
 
     var givenUserId = verified.id;
   } catch (err) {
@@ -132,7 +111,6 @@ router.post("/save", async (req: Request, res: Response) => {
     return;
   }
 
-  // ADD DATA
   const data = new dataModel({
     userId: givenUserId,
     data: req.body.data,
@@ -144,7 +122,6 @@ router.post("/save", async (req: Request, res: Response) => {
       code: "dataSaved",
       message: {
         id: savedData._id,
-        // data: savedData.data
       },
     });
   } catch (err) {
@@ -154,19 +131,14 @@ router.post("/save", async (req: Request, res: Response) => {
 });
 
 router.post("/getdata", async (req: Request, res: Response) => {
-  const token = req.body.token;
-  // console.log(req)
-  // console.log("information log ");
+  const { token } = req.body;
   if (!token) return res.status(400).send({ code: "tokenNotReceived", message: token });
 
   try {
-    const verified = jwt.verify(token, process.env.SECRET_JWT_TOKEN) as { id: string };
-    console.log("verified log: " + JSON.stringify(verified));
-    console.log("verified log: " + JSON.stringify(verified));
+    const { id } = jwt.verify(token, process.env.SECRET_JWT_TOKEN) as { id: string };
 
-    let givenUserId = verified.id;
-    const returnedData = await dataModel.find({ userId: givenUserId });
-    // console.log('Email exists log: '+ returnedData)
+    const returnedData = await dataModel.find({ userId: id });
+
     if (returnedData) return res.status(200).send(returnedData);
     res.status(200).send({ code: "dataNotFound", message: returnedData });
   } catch (err) {
@@ -175,9 +147,6 @@ router.post("/getdata", async (req: Request, res: Response) => {
 });
 
 router.post("/otpsend", async (req: Request, res: Response) => {
-  console.log(req.body);
-
-  // VALIDATION
   const { error } = userValidation.checkEmail(req.body);
   if (error != null) {
     console.log("OTP service email validation log: " + error);
@@ -189,13 +158,11 @@ router.post("/otpsend", async (req: Request, res: Response) => {
 
   const rand = Math.floor(100000 + Math.random() * 900000);
 
-  // ADD OTP Model
+  // save OTP in DB
   const otp = new otpModel({
     email: req.body.email,
     otp: rand.toString(),
   });
-
-  console.log("New otp generated is " + rand);
 
   const params = {
     Destination: {
@@ -228,7 +195,6 @@ router.post("/otpsend", async (req: Request, res: Response) => {
   // OTP save to DB
   try {
     const savedOtp = await otp.save();
-    console.log("otpsend success log: " + savedOtp);
     res.send({
       code: "otpSent",
       message: {
@@ -266,7 +232,7 @@ router.get("/news", async (req: Request, res: Response) => {
   });
 
   const prompt: string = `Summarize the following news article descriptions in a better way and combine them in a single paragraph then devide them in bullet points.
-    Add more context to the points and also add the probable circumstance or impact for this in the same point itself.`;
+    Add more context to the points and also add the probable circumstance or impact for this in the same point itself. example: '- first point.- second point.- third point.`;
 
   const chatCompletion = await openai.chat.completions.create({
     messages: [
@@ -286,6 +252,42 @@ router.get("/news", async (req: Request, res: Response) => {
 
   // send the generated data
   res.send(chatCompletion.choices[0].message.content);
+});
+
+router.post("/write", async (req: Request, res: Response) => {
+  const { text } = req.body;
+  const { authorization: token } = req.headers;
+  if (!token) return res.status(400).send({ code: "tokenNotReceived", message: token });
+
+  try {
+    const { id: userId } = jwt.verify(token, process.env.SECRET_JWT_TOKEN) as { id: string };
+    const user = await userModel.find({ userId });
+  } catch (err) {
+    res.status(400).send("tokenInvalid" + err);
+  }
+
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const prompt: string = `Write this in a better way. '${text}`;
+
+  try {
+    const chatCompletion = await openai.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      model: "gpt-3.5-turbo", // gpt-3.5-turbo-16k-0613  gpt-3.5-turbo
+    });
+
+    // send the generated data
+    res.send({ response: chatCompletion.choices[0].message.content });
+  } catch (e) {
+    res.status(400).send("Unable to process the request.");
+  }
 });
 
 export default router;

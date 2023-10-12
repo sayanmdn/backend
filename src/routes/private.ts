@@ -5,8 +5,7 @@ const router = Router();
 
 router.post("/isAuthenticated", (req: Request, res: Response) => {
   try {
-    const token = req.headers.authorization?.slice(6); // Remove "Bearer "
-    console.log(JSON.stringify(req, getCircularReplacer()));
+    const { authorization: token } = req.headers;
     if (!token) {
       return res.status(400).send({ code: "tokenNotReceived" });
     }
@@ -17,18 +16,5 @@ router.post("/isAuthenticated", (req: Request, res: Response) => {
     res.status(400).send("tokenInvalid");
   }
 });
-
-const getCircularReplacer = () => {
-  const seen = new WeakSet();
-  return (key: any, value: any) => {
-    if (typeof value === "object" && value !== null) {
-      if (seen.has(value)) {
-        return;
-      }
-      seen.add(value);
-    }
-    return value;
-  };
-};
 
 export default router;

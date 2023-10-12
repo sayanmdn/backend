@@ -9,7 +9,8 @@ provider:
   runtime: nodejs16.x
   stage: dev
   region: ap-south-1
-  memorySize: 256
+  memorySize: 192
+  timeout: 60
 
 functions:
   app-api:
