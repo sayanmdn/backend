@@ -2,9 +2,13 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IUser extends Document {
   name: string;
-  email: string;
+  email?: string;
   password: string;
   time: Date;
+  phone?: string;
+  subjects?: string[];
+  fromClass?: number;
+  toClass?: number;
 }
 
 const userSchema: Schema<IUser> = new mongoose.Schema({
@@ -15,7 +19,7 @@ const userSchema: Schema<IUser> = new mongoose.Schema({
   },
   email: {
     type: String,
-    required: true,
+    required: false,
     max: 128,
     min: 8,
   },
@@ -28,6 +32,18 @@ const userSchema: Schema<IUser> = new mongoose.Schema({
   time: {
     type: Date,
     default: Date.now,
+  },
+  phone: {
+    type: String,
+  },
+  subjects: {
+    type: [String],
+  },
+  fromClass: {
+    type: Number,
+  },
+  toClass: {
+    type: Number,
   },
 });
 

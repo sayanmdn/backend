@@ -11,6 +11,7 @@ import aws from "aws-sdk";
 import * as userValidation from "../validation/user";
 import NewsAPI from "newsapi";
 import OpenAI from "openai";
+import { isEmpty, toUpper } from "lodash";
 
 const newsapi = new NewsAPI("8c4fe58fb02945eb9469d8859addd041");
 
@@ -19,7 +20,6 @@ aws.config.update({
   secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
   region: "ap-southeast-1",
 });
-const ses = new aws.SES({ apiVersion: "2010-12-01" });
 
 const router = express.Router();
 
@@ -36,8 +36,12 @@ router.post("/signup", async (req: Request, res: Response) => {
   const otpFromDB = await otpModel.find({ email: req.body.email });
   if (otpFromDB[otpFromDB.length - 1].otp !== req.body.otp) return res.send("OTP did not match");
 
-  const emailExist = await userModel.findOne({ email: req.body.email });
-  if (emailExist) return res.status(400).send("Email already exists");
+  if (isEmpty(req.body.email)) {
+    const emailExist = await userModel.findOne({ email: req.body.email });
+    if (emailExist) return res.status(400).send("Email already exists");
+  } else {
+    // check if the phone number exists
+  }
 
   // hash password
   const salt = await bcrypt.genSalt(10);
@@ -47,6 +51,13 @@ router.post("/signup", async (req: Request, res: Response) => {
     name: req.body.name,
     email: req.body.email,
     password: hashedPassword,
+    phone: req.body.phone || undefined,
+    subjects:
+      toUpper(req.body.subject)
+        .split(",")
+        .map((element) => element.trim()) || undefined,
+    fromClass: req.body.selectedFromRange ? parseInt(req.body.selectedFromRange) : undefined,
+    toClass: req.body.selectedToRange ? parseInt(req.body.selectedToRange) : undefined,
   });
   try {
     const saveUser = await user.save();
@@ -147,6 +158,59 @@ router.post("/getdata", async (req: Request, res: Response) => {
 });
 
 router.post("/otpsend", async (req: Request, res: Response) => {
+  console.log(req.body);
+  if (req.body.role === "TEACHER") {
+    const { error } = userValidation.checkPhone(req.body);
+    if (error != null) {
+      console.log("OTP service email validation log: " + error);
+      return res.send({
+        code: "validationFalse",
+        message: error.details[0].message,
+      });
+    }
+
+    const rand = Math.floor(100000 + Math.random() * 900000);
+
+    // save OTP in DB
+    const otp = new otpModel({
+      email: req.body.phone,
+      otp: rand.toString(),
+    });
+
+    // create a new instance of the AWS.SES
+    aws.config.update({
+      accessKeyId: process.env.AWS_ACCESSKEY,
+      secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
+      region: "ap-south-1",
+    });
+
+    const sns = new aws.SNS();
+    const processedNumber = req.body.phone.length === 10 ? "+91".concat(req.body.phone) : req.body.phone;
+
+    // Define the message parameters
+    const params = {
+      Message: "Hello, You OTP for FindMyTeahcer is " + rand,
+      PhoneNumber: processedNumber, // Replace with the recipient's phone number
+    };
+
+    // Send the SMS
+    sns.publish(params, (err, data) => {
+      if (err) {
+        res.status(400).send(err);
+        console.error("Error sending SMS:", err);
+      } else {
+        res.send({
+          code: "otpSent",
+          message: {
+            id: "savedOtp._id",
+            email: "savedOtp.email",
+          },
+        });
+        console.log("SMS sent successfully:", data);
+      }
+    });
+    return;
+  }
   const { error } = userValidation.checkEmail(req.body);
   if (error != null) {
     console.log("OTP service email validation log: " + error);
@@ -163,6 +227,15 @@ router.post("/otpsend", async (req: Request, res: Response) => {
     email: req.body.email,
     otp: rand.toString(),
   });
+
+  // create a new instance of the AWS.SES
+  aws.config.update({
+    accessKeyId: process.env.AWS_ACCESSKEY,
+    secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
+    region: "ap-southeast-1",
+  });
+
+  const ses = new aws.SES({ apiVersion: "2010-12-01" });
 
   const params = {
     Destination: {
