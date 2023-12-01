@@ -32,6 +32,50 @@ router.post("/signup", async (req: Request, res: Response) => {
     });
   }
 
+  if (req.body.role === "TEACHER") {
+    // Check OTP
+    const otpFromDB = await otpModel.find({ email: req.body.phone });
+    if (otpFromDB[otpFromDB.length - 1].otp !== req.body.otp) return res.send("OTP did not match");
+
+    if (req.body.phone) {
+      const phoneExist = await userModel.findOne({ phone: req.body.phone });
+      if (phoneExist) return res.status(400).send("Phone number already exists");
+    } else {
+      return res.status(400).send("field 'phone' is missing");
+    }
+
+    // hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+
+    const user = new userModel({
+      name: req.body.name,
+      role: req.body.role,
+      email: req.body.email || undefined,
+      password: hashedPassword,
+      phone: req.body.phone || undefined,
+      subjects:
+        toUpper(req.body.subject)
+          .split(",")
+          .map((element) => element.trim()) || undefined,
+      fromClass: req.body.selectedFromRange ? parseInt(req.body.selectedFromRange) : undefined,
+      toClass: req.body.selectedToRange ? parseInt(req.body.selectedToRange) : undefined,
+    });
+    try {
+      const saveUser = await user.save();
+      res.send({
+        code: "userCreated",
+        message: {
+          id: saveUser._id,
+          name: saveUser.name,
+        },
+      });
+    } catch (err) {
+      res.status(400).send(err);
+    }
+    return;
+  }
+
   // Check OTP
   const otpFromDB = await otpModel.find({ email: req.body.email });
   if (otpFromDB[otpFromDB.length - 1].otp !== req.body.otp) return res.send("OTP did not match");
@@ -158,7 +202,6 @@ router.post("/getdata", async (req: Request, res: Response) => {
 });
 
 router.post("/otpsend", async (req: Request, res: Response) => {
-  console.log(req.body);
   if (req.body.role === "TEACHER") {
     const { error } = userValidation.checkPhone(req.body);
     if (error != null) {
@@ -209,6 +252,26 @@ router.post("/otpsend", async (req: Request, res: Response) => {
         console.log("SMS sent successfully:", data);
       }
     });
+
+    // save OTP in DB
+    const smsOTP = new otpModel({
+      email: processedNumber,
+      otp: rand.toString(),
+    });
+
+    try {
+      const savedOtp = await otp.save();
+      res.send({
+        code: "otpSent",
+        message: {
+          id: savedOtp._id,
+          email: savedOtp.email,
+        },
+      });
+    } catch (err) {
+      res.status(400).send(err);
+    }
+
     return;
   }
   const { error } = userValidation.checkEmail(req.body);

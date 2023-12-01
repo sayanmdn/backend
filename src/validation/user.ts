@@ -5,6 +5,7 @@ const signupValidationSchema = Joi.object({
   role: Joi.string(),
   name: Joi.string().min(8).required(),
   email: Joi.string().min(8).email(),
+  phone: Joi.string().length(10),
   otp: Joi.string().length(6).required(),
   password: Joi.string().min(8).required(),
   subject: Joi.string().min(2),

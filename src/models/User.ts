@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IUser extends Document {
   name: string;
+  role?: string;
   email?: string;
   password: string;
   time: Date;
@@ -16,6 +17,9 @@ const userSchema: Schema<IUser> = new mongoose.Schema({
     type: String,
     required: true,
     min: 6,
+  },
+  role: {
+    type: String,
   },
   email: {
     type: String,
