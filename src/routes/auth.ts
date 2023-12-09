@@ -224,12 +224,6 @@ router.post("/otpsend", async (req: Request, res: Response) => {
 
     const rand = Math.floor(100000 + Math.random() * 900000);
 
-    // save OTP in DB
-    const otp = new otpModel({
-      email: req.body.phone,
-      otp: rand.toString(),
-    });
-
     // create a new instance of the AWS.SES
     aws.config.update({
       accessKeyId: process.env.AWS_ACCESSKEY,
@@ -247,25 +241,16 @@ router.post("/otpsend", async (req: Request, res: Response) => {
     };
 
     // Send the SMS
-    sns.publish(params, (err, data) => {
+    sns.publish(params, (err, _data) => {
       if (err) {
-        res.status(400).send(err);
         console.error("Error sending SMS:", err);
-      } else {
-        res.send({
-          code: "otpSent",
-          message: {
-            id: "savedOtp._id",
-            email: "savedOtp.email",
-          },
-        });
-        console.log("SMS sent successfully:", data);
+        return res.status(400).send(err);
       }
     });
 
     // save OTP in DB
-    const smsOTP = new otpModel({
-      email: processedNumber,
+    const otp = new otpModel({
+      email: req.body.phone,
       otp: rand.toString(),
     });
 
@@ -284,9 +269,10 @@ router.post("/otpsend", async (req: Request, res: Response) => {
 
     return;
   }
+
+  // Email OTP Send
   const { error } = userValidation.checkEmail(req.body);
   if (error != null) {
-    console.log("OTP service email validation log: " + error);
     return res.send({
       code: "validationFalse",
       message: error.details[0].message,
@@ -333,7 +319,6 @@ router.post("/otpsend", async (req: Request, res: Response) => {
 
   try {
     await sendEmail;
-    console.log("email submitted to SES");
   } catch (error) {
     console.log(error);
   }
