@@ -1,5 +1,17 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+interface ISubjectClass {
+  subject: string;
+  fromClass: number;
+  toClass: number;
+}
+
+const subjectClassesSchema = new mongoose.Schema({
+  subject: String,
+  fromClass: Number,
+  toClass: Number,
+});
+
 export interface IUser extends Document {
   name: string;
   role?: string;
@@ -8,8 +20,7 @@ export interface IUser extends Document {
   time: Date;
   phone?: string;
   subjects?: string[];
-  fromClass?: number;
-  toClass?: number;
+  subjectClasses: ISubjectClass[];
 }
 
 const userSchema: Schema<IUser> = new mongoose.Schema({
@@ -43,11 +54,8 @@ const userSchema: Schema<IUser> = new mongoose.Schema({
   subjects: {
     type: [String],
   },
-  fromClass: {
-    type: Number,
-  },
-  toClass: {
-    type: Number,
+  subjectClasses: {
+    type: [subjectClassesSchema],
   },
 });
 

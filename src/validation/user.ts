@@ -8,9 +8,13 @@ const signupValidationSchema = Joi.object({
   phone: Joi.string().length(10),
   otp: Joi.string().length(6).required(),
   password: Joi.string().min(8).required(),
-  subject: Joi.string().min(2),
-  selectedFromRange: Joi.string(),
-  selectedToRange: Joi.string(),
+  subjects: Joi.array().items(
+    Joi.object({
+      subject: Joi.string().min(2).required(),
+      selectedFromRange: Joi.number().required(),
+      selectedToRange: Joi.number().required(),
+    }),
+  ),
 });
 
 const checkSignup = (body: any) => {

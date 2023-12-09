@@ -23,6 +23,26 @@ aws.config.update({
 
 const router = express.Router();
 
+interface OriginalFormat {
+  subject: string;
+  selectedFromRange: number;
+  selectedToRange: number;
+}
+
+interface DesiredFormat {
+  subject: string;
+  fromClass: number;
+  toClass: number;
+}
+
+const serializeFunction = (inputArray: OriginalFormat[]): DesiredFormat[] => {
+  return inputArray.map(({ subject, selectedFromRange, selectedToRange }) => ({
+    subject,
+    fromClass: selectedFromRange,
+    toClass: selectedToRange,
+  }));
+};
+
 router.post("/signup", async (req: Request, res: Response) => {
   const { error } = userValidation.checkSignup(req.body);
   if (error != null) {
@@ -54,12 +74,8 @@ router.post("/signup", async (req: Request, res: Response) => {
       email: req.body.email || undefined,
       password: hashedPassword,
       phone: req.body.phone || undefined,
-      subjects:
-        toUpper(req.body.subject)
-          .split(",")
-          .map((element) => element.trim()) || undefined,
-      fromClass: req.body.selectedFromRange ? parseInt(req.body.selectedFromRange) : undefined,
-      toClass: req.body.selectedToRange ? parseInt(req.body.selectedToRange) : undefined,
+      subjects: req.body.subjects.map((element) => toUpper(element.subject.trim())) || undefined,
+      subjectClasses: serializeFunction(req.body.subjects) || undefined,
     });
     try {
       const saveUser = await user.save();
@@ -80,11 +96,11 @@ router.post("/signup", async (req: Request, res: Response) => {
   const otpFromDB = await otpModel.find({ email: req.body.email });
   if (otpFromDB[otpFromDB.length - 1].otp !== req.body.otp) return res.send("OTP did not match");
 
-  if (isEmpty(req.body.email)) {
+  if (!isEmpty(req.body.email)) {
     const emailExist = await userModel.findOne({ email: req.body.email });
     if (emailExist) return res.status(400).send("Email already exists");
   } else {
-    // check if the phone number exists
+    return res.status(400).send("Email is required");
   }
 
   // hash password
@@ -96,12 +112,6 @@ router.post("/signup", async (req: Request, res: Response) => {
     email: req.body.email,
     password: hashedPassword,
     phone: req.body.phone || undefined,
-    subjects:
-      toUpper(req.body.subject)
-        .split(",")
-        .map((element) => element.trim()) || undefined,
-    fromClass: req.body.selectedFromRange ? parseInt(req.body.selectedFromRange) : undefined,
-    toClass: req.body.selectedToRange ? parseInt(req.body.selectedToRange) : undefined,
   });
   try {
     const saveUser = await user.save();
