@@ -76,6 +76,9 @@ router.post("/signup", async (req: Request, res: Response) => {
       phone: req.body.phone || undefined,
       subjects: req.body.subjects.map((element) => toUpper(element.subject.trim())) || undefined,
       subjectClasses: serializeFunction(req.body.subjects) || undefined,
+      college: req.body.college || undefined,
+      subjectEnrolled: req.body.subjectEnrolled || undefined,
+      degreeEnrolled: req.body.degreeEnrolled || undefined,
     });
     try {
       const saveUser = await user.save();
