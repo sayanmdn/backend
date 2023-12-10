@@ -24,6 +24,7 @@ export interface IUser extends Document {
   college?: string;
   subjectEnrolled?: string;
   degreeEnrolled?: string;
+  profileViews?: number;
 }
 
 const userSchema: Schema<IUser> = new mongoose.Schema({
@@ -68,6 +69,9 @@ const userSchema: Schema<IUser> = new mongoose.Schema({
   },
   degreeEnrolled: {
     type: String,
+  },
+  profileViews: {
+    type: Number,
   },
 });
 
