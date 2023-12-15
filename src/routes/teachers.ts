@@ -92,7 +92,17 @@ router.post("/list", async (req: Request, res: Response) => {
       .find({ role: TEACHER_USER_ROLE })
       .skip(page * limit)
       .limit(limit);
+
+    // remove password and phone from the returned data
+    for (const obj of returnedData) {
+      obj.password = null;
+      obj.phone = null;
+    }
+
+    // return the data
     if (returnedData) return res.status(200).send(returnedData);
+
+    // if no data is found
     res.status(200).send({ code: "notFound" });
   } catch (err) {
     res.status(400).send("Error" + err);
