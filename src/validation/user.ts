@@ -53,4 +53,23 @@ const checkEmail = (body: any) => {
   return emailValidationSchema.validate(body);
 };
 
-export { checkSignup, checkLogin, checkEmail, checkPhone };
+// student registration validation schema
+const studentRegistrationValidationSchema = Joi.object({
+  phone: Joi.string().length(10).required(),
+  otp: Joi.string().length(6).required(),
+});
+
+const checkStudentRegistration = (body: any) => {
+  return studentRegistrationValidationSchema.validate(body);
+};
+
+const checkStudentUpdate = (body: any) => {
+  return Joi.object({
+    phone: Joi.string().length(10).required(),
+    token: Joi.string().required(),
+    name: Joi.string().min(8).required(),
+    class: Joi.number().required(),
+  }).validate(body);
+};
+
+export { checkSignup, checkLogin, checkEmail, checkPhone, checkStudentRegistration, checkStudentUpdate };

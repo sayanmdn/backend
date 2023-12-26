@@ -1,11 +1,12 @@
+import dotenv from "dotenv";
 import express from "express";
 import bodyParser from "body-parser";
 import cors from "cors";
+import { connect, Connection, connection } from "mongoose";
 import authRouter from "./routes/auth";
 import postRoute from "./routes/private";
 import teachersRouter from "./routes/teachers";
-import { connect, Connection, connection } from "mongoose";
-import dotenv from "dotenv";
+import studentRouter from "./routes/students";
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ const port = 8080;
 app.use("/user", authRouter);
 app.use("/post", postRoute);
 app.use("/teachers", teachersRouter);
+app.use("/students", studentRouter);
 
 app.get("/", (req, res) => {
   res.send("Welcome! This is the portfolio backend v2");

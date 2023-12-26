@@ -12,6 +12,7 @@ import * as userValidation from "../validation/user";
 import NewsAPI from "newsapi";
 import OpenAI from "openai";
 import { isEmpty, toUpper } from "lodash";
+import { STUDENT_USER_ROLE, TEACHER_USER_ROLE } from "../constant";
 
 const newsapi = new NewsAPI("8c4fe58fb02945eb9469d8859addd041");
 
@@ -215,7 +216,7 @@ router.post("/getdata", async (req: Request, res: Response) => {
 });
 
 router.post("/otpsend", async (req: Request, res: Response) => {
-  if (req.body.role === "TEACHER") {
+  if (req.body.role === TEACHER_USER_ROLE || req.body.role === STUDENT_USER_ROLE) {
     const { error } = userValidation.checkPhone(req.body);
     if (error != null) {
       console.log("OTP service email validation log: " + error);

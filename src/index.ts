@@ -7,6 +7,7 @@ import cors from "cors";
 import authRouter from "./routes/auth";
 import postRoute from "./routes/private";
 import teachersRouter from "./routes/teachers";
+import studentRouter from "./routes/students";
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(bodyParser.json());
 app.use("/user", authRouter);
 app.use("/post", postRoute);
 app.use("/teachers", teachersRouter);
+app.use("/students", studentRouter);
 
 app.get("/", (req, res) => {
   res.send("Welcome! This is the portfolio backend v2");
