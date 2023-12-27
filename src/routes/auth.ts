@@ -140,7 +140,7 @@ router.post("/login", async (req: Request, res: Response) => {
 
   const userEmail = req.body.email;
 
-  let userByEmail: { _id: string; password: string; name: string } | undefined = undefined;
+  let userByEmail: { _id: string; password: string; name: string; role?: string } | undefined = undefined;
 
   // check if email already exists
   try {
@@ -158,11 +158,15 @@ router.post("/login", async (req: Request, res: Response) => {
   const validPass = await bcrypt.compare(req.body.password, userByEmail.password);
   if (!validPass) return res.status(400).send("Invalid password");
 
-  const token = jwt.sign({ id: userByEmail._id, name: userByEmail.name }, process.env.SECRET_JWT_TOKEN);
+  const token = jwt.sign(
+    { id: userByEmail._id, name: userByEmail.name, role: userByEmail.role || "USER" },
+    process.env.SECRET_JWT_TOKEN,
+  );
+
   return res.header("auth-token", token).send({
     code: "Loggedin",
     token: token,
-    user: { id: userByEmail._id, name: userByEmail.name },
+    user: { id: userByEmail._id, name: userByEmail.name, role: userByEmail.role || "USER" },
   });
 });
 

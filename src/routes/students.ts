@@ -1,6 +1,6 @@
 import { Request, Response, Router } from "express";
 import jwt from "jsonwebtoken";
-import { STATUS_CODE, SUCCESS_CODE } from "../constant";
+import { STATUS_CODE, STUDENT_USER_ROLE, SUCCESS_CODE } from "../constant";
 import otpModel from "../models/OTP";
 import * as userValidation from "../validation/user";
 import StudentModel from "../models/Student";
@@ -20,7 +20,7 @@ router.post("/access", async (req: Request, res: Response) => {
   const otpFromDB = await otpModel.find({ email: req.body.phone });
   if (otpFromDB[otpFromDB.length - 1].otp !== req.body.otp) return res.send("OTP did not match");
 
-  const token = jwt.sign({ id: req.body.phone }, process.env.SECRET_JWT_TOKEN);
+  const token = jwt.sign({ id: req.body.phone, role: STUDENT_USER_ROLE }, process.env.SECRET_JWT_TOKEN);
 
   // check if the student is already registered
   const student = await StudentModel.findOne({ phone: req.body.phone });
