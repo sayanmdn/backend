@@ -1,13 +1,3 @@
-# Custom domain
-
-findtacher.com {
-reverse_proxy localhost:8080 # Adjust to your Node.js app's port
-encode gzip
-file_server
-}
-
-# Localhost
-
 localhost {
 reverse_proxy localhost:8080 # Adjust to your Node.js app's port
 encode gzip
