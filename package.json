@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "run-build": "node dist/index.js",
+    "run-build": "node dist/index-local.js",
     "test": "ts-node src/index.ts",
     "dev": "ts-node-dev src/index-local.ts",
     "build": "tsc -p ."
