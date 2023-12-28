@@ -1,4 +1,8 @@
-localhost:8081 {
+{
+        admin 0.0.0.0:2020
+}
+
+localhost {
         bind 0.0.0.0
         reverse_proxy localhost:8080
         encode gzip
