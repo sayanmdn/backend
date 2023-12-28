@@ -220,10 +220,68 @@ router.post("/getdata", async (req: Request, res: Response) => {
 });
 
 router.post("/otpsend", async (req: Request, res: Response) => {
-  if (req.body.role === TEACHER_USER_ROLE || req.body.role === STUDENT_USER_ROLE) {
-    const { error } = userValidation.checkPhone(req.body);
+  try {
+    if (req.body.role === TEACHER_USER_ROLE || req.body.role === STUDENT_USER_ROLE) {
+      const { error } = userValidation.checkPhone(req.body);
+      if (error != null) {
+        console.log("OTP service email validation log: " + error);
+        return res.send({
+          code: "validationFalse",
+          message: error.details[0].message,
+        });
+      }
+
+      const rand = Math.floor(100000 + Math.random() * 900000);
+
+      // create a new instance of the AWS.SES
+      aws.config.update({
+        accessKeyId: process.env.AWS_ACCESSKEY,
+        secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
+        region: "ap-south-1",
+      });
+
+      const sns = new aws.SNS();
+      const processedNumber = req.body.phone.length === 10 ? "+91".concat(req.body.phone) : req.body.phone;
+
+      // Define the message parameters
+      const params = {
+        Message: "Hello, You OTP for FindMyTeahcer is " + rand,
+        PhoneNumber: processedNumber, // Replace with the recipient's phone number
+      };
+
+      // Send the SMS
+      sns.publish(params, (err, _data) => {
+        if (err) {
+          console.error("Error sending SMS:", err);
+          return res.status(400).send(err);
+        }
+      });
+
+      // save OTP in DB
+      const otp = new otpModel({
+        email: req.body.phone,
+        otp: rand.toString(),
+      });
+
+      try {
+        const savedOtp = await otp.save();
+        res.send({
+          code: "otpSent",
+          message: {
+            id: savedOtp._id,
+            email: savedOtp.email,
+          },
+        });
+      } catch (err) {
+        res.status(400).send(err);
+      }
+
+      return;
+    }
+
+    // Email OTP Send
+    const { error } = userValidation.checkEmail(req.body);
     if (error != null) {
-      console.log("OTP service email validation log: " + error);
       return res.send({
         code: "validationFalse",
         message: error.details[0].message,
@@ -232,36 +290,49 @@ router.post("/otpsend", async (req: Request, res: Response) => {
 
     const rand = Math.floor(100000 + Math.random() * 900000);
 
+    // save OTP in DB
+    const otp = new otpModel({
+      email: req.body.email,
+      otp: rand.toString(),
+    });
+
     // create a new instance of the AWS.SES
     aws.config.update({
       accessKeyId: process.env.AWS_ACCESSKEY,
       secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
-      region: "ap-south-1",
+      region: "ap-southeast-1",
     });
 
-    const sns = new aws.SNS();
-    const processedNumber = req.body.phone.length === 10 ? "+91".concat(req.body.phone) : req.body.phone;
+    const ses = new aws.SES({ apiVersion: "2010-12-01" });
 
-    // Define the message parameters
     const params = {
-      Message: "Hello, You OTP for FindMyTeahcer is " + rand,
-      PhoneNumber: processedNumber, // Replace with the recipient's phone number
+      Destination: {
+        ToAddresses: [req.body.email],
+      },
+      Message: {
+        Body: {
+          Html: {
+            Charset: "UTF-8",
+            Data: getMessageHTML(rand.toString()),
+          },
+        },
+        Subject: {
+          Charset: "UTF-8",
+          Data: "Your OTP is here",
+        },
+      },
+      Source: "info@mail.sayantanmishra.com",
     };
 
-    // Send the SMS
-    sns.publish(params, (err, _data) => {
-      if (err) {
-        console.error("Error sending SMS:", err);
-        return res.status(400).send(err);
-      }
-    });
+    const sendEmail = ses.sendEmail(params).promise();
 
-    // save OTP in DB
-    const otp = new otpModel({
-      email: req.body.phone,
-      otp: rand.toString(),
-    });
+    try {
+      await sendEmail;
+    } catch (error) {
+      console.log(error);
+    }
 
+    // OTP save to DB
     try {
       const savedOtp = await otp.save();
       res.send({
@@ -273,77 +344,10 @@ router.post("/otpsend", async (req: Request, res: Response) => {
       });
     } catch (err) {
       res.status(400).send(err);
+      console.log(err);
     }
-
-    return;
-  }
-
-  // Email OTP Send
-  const { error } = userValidation.checkEmail(req.body);
-  if (error != null) {
-    return res.send({
-      code: "validationFalse",
-      message: error.details[0].message,
-    });
-  }
-
-  const rand = Math.floor(100000 + Math.random() * 900000);
-
-  // save OTP in DB
-  const otp = new otpModel({
-    email: req.body.email,
-    otp: rand.toString(),
-  });
-
-  // create a new instance of the AWS.SES
-  aws.config.update({
-    accessKeyId: process.env.AWS_ACCESSKEY,
-    secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
-    region: "ap-southeast-1",
-  });
-
-  const ses = new aws.SES({ apiVersion: "2010-12-01" });
-
-  const params = {
-    Destination: {
-      ToAddresses: [req.body.email],
-    },
-    Message: {
-      Body: {
-        Html: {
-          Charset: "UTF-8",
-          Data: getMessageHTML(rand.toString()),
-        },
-      },
-      Subject: {
-        Charset: "UTF-8",
-        Data: "Your OTP is here",
-      },
-    },
-    Source: "info@mail.sayantanmishra.com",
-  };
-
-  const sendEmail = ses.sendEmail(params).promise();
-
-  try {
-    await sendEmail;
-  } catch (error) {
-    console.log(error);
-  }
-
-  // OTP save to DB
-  try {
-    const savedOtp = await otp.save();
-    res.send({
-      code: "otpSent",
-      message: {
-        id: savedOtp._id,
-        email: savedOtp.email,
-      },
-    });
   } catch (err) {
-    res.status(400).send(err);
-    console.log(err);
+    console.log("Error in OTP send: " + JSON.stringify(err));
   }
 });
 
