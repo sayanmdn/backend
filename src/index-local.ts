@@ -13,7 +13,7 @@ dotenv.config();
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-const port = 80;
+const port = 8080;
 
 app.use("/user", authRouter);
 app.use("/post", postRoute);

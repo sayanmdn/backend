@@ -16,7 +16,7 @@ dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(body_parser_1.default.json());
-const port = 80;
+const port = 8080;
 app.use("/user", auth_1.default);
 app.use("/post", private_1.default);
 app.use("/teachers", teachers_1.default);
