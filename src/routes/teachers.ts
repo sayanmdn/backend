@@ -1,5 +1,5 @@
 import { Request, Response, Router } from "express";
-import userModel from "../models/User";
+import userModel, { IUser } from "../models/User";
 import { isEmpty } from "lodash";
 import jwt from "jsonwebtoken";
 import { TEACHER_USER_ROLE } from "../constant";
@@ -42,7 +42,8 @@ router.post("/find", async (req: Request, res: Response) => {
 
 // searches for the teacher with the given id
 router.post("/findById", async (req: Request, res: Response) => {
-  const { id: _id } = req.body;
+  const { id: _id } = req.body as { id: string };
+  const { authorization: token } = req.headers as { authorization: string | undefined };
 
   // check if id is received
   if (isEmpty(_id)) return res.status(400).send({ code: "empty" });
@@ -50,7 +51,9 @@ router.post("/findById", async (req: Request, res: Response) => {
   // return the user with the given id
   try {
     // fetch the user with the given id
-    const returnedData = await userModel.findOne({ _id });
+    const returnedData = (await userModel.findOne({ _id })) as IUser | null;
+
+    if (!returnedData) return res.status(400).send({ code: "notFound" });
 
     // remove password from the returned data
     returnedData.password = null;
@@ -58,11 +61,21 @@ router.post("/findById", async (req: Request, res: Response) => {
     // increment the profileViews by 1
     await userModel.updateOne({ _id: returnedData._id }, { $inc: { profileViews: 1 } });
 
-    // return the data
-    if (returnedData) return res.status(200).send(returnedData);
+    // check if token is received and valid
+    if (token) {
+      try {
+        jwt.verify(token, process.env.SECRET_JWT_TOKEN);
 
-    // if no data is found
-    res.status(200).send({ code: "notFound" });
+        // return the data with phone
+        return res.status(200).send(returnedData);
+      } catch (_err) {}
+    }
+
+    // delete the phone from the returned data
+    returnedData.phone = null;
+
+    // return the data
+    return res.status(200).send(returnedData);
   } catch (err) {
     res.status(400).send("Error" + err);
   }
