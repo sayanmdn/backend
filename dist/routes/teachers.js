@@ -52,22 +52,33 @@ router.post("/find", (req, res) => __awaiter(void 0, void 0, void 0, function* (
 // searches for the teacher with the given id
 router.post("/findById", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id: _id } = req.body;
+    const { authorization: token } = req.headers;
     // check if id is received
     if ((0, lodash_1.isEmpty)(_id))
         return res.status(400).send({ code: "empty" });
     // return the user with the given id
     try {
         // fetch the user with the given id
-        const returnedData = yield User_1.default.findOne({ _id });
+        const returnedData = (yield User_1.default.findOne({ _id }));
+        if (!returnedData)
+            return res.status(400).send({ code: "notFound" });
         // remove password from the returned data
         returnedData.password = null;
         // increment the profileViews by 1
         yield User_1.default.updateOne({ _id: returnedData._id }, { $inc: { profileViews: 1 } });
+        // check if token is received and valid
+        if (token) {
+            try {
+                jsonwebtoken_1.default.verify(token, process.env.SECRET_JWT_TOKEN);
+                // return the data with phone
+                return res.status(200).send(returnedData);
+            }
+            catch (_err) { }
+        }
+        // delete the phone from the returned data
+        returnedData.phone = null;
         // return the data
-        if (returnedData)
-            return res.status(200).send(returnedData);
-        // if no data is found
-        res.status(200).send({ code: "notFound" });
+        return res.status(200).send(returnedData);
     }
     catch (err) {
         res.status(400).send("Error" + err);
