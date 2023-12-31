@@ -1,6 +1,6 @@
 import { Request, Response, Router } from "express";
 import jwt from "jsonwebtoken";
-import { STATUS_CODE, STUDENT_USER_ROLE, SUCCESS_CODE } from "../constant";
+import { STUDENT_USER_ROLE, SUCCESS_CODE } from "../constant";
 import otpModel from "../models/OTP";
 import * as userValidation from "../validation/user";
 import StudentModel from "../models/Student";
@@ -37,7 +37,7 @@ router.post("/access", async (req: Request, res: Response) => {
 router.post("/update", async (req: Request, res: Response) => {
   const { error } = userValidation.checkStudentUpdate(req.body);
   if (!isNil(error)) {
-    return res.status(STATUS_CODE.BAD_REQUEST).send({
+    return res.send({
       code: "validationFalse",
       message: error.details[0].message,
     });
@@ -46,9 +46,9 @@ router.post("/update", async (req: Request, res: Response) => {
   // check if the token is valid
   try {
     const { id } = jwt.verify(req.body.token, process.env.SECRET_JWT_TOKEN) as { id: string };
-    if (id !== req.body.phone) return res.status(STATUS_CODE.UNAUTHORIZED).send({ code: "tokenInvalid" });
+    if (id !== req.body.phone) return res.send({ code: "tokenInvalid" });
   } catch (_err) {
-    res.status(STATUS_CODE.UNAUTHORIZED).send({ code: "tokenInvalid" });
+    res.send({ code: "tokenInvalid" });
   }
 
   // check if the student is already registered
@@ -56,7 +56,7 @@ router.post("/update", async (req: Request, res: Response) => {
   if (!student) return res.json({ code: "notRegistered" });
 
   // update the student
-  return res.status(STATUS_CODE.SUCCESS).send({
+  return res.send({
     code: SUCCESS_CODE,
     student: await StudentModel.findOneAndUpdate({ phone: req.body.phone }, req.body, { new: true }),
   });
