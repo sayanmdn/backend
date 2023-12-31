@@ -68,7 +68,7 @@ router.post("/access", (req, res) => __awaiter(void 0, void 0, void 0, function*
 router.post("/update", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { error } = userValidation.checkStudentUpdate(req.body);
     if (!(0, lodash_1.isNil)(error)) {
-        return res.status(constant_1.STATUS_CODE.BAD_REQUEST).send({
+        return res.send({
             code: "validationFalse",
             message: error.details[0].message,
         });
@@ -77,17 +77,17 @@ router.post("/update", (req, res) => __awaiter(void 0, void 0, void 0, function*
     try {
         const { id } = jsonwebtoken_1.default.verify(req.body.token, process.env.SECRET_JWT_TOKEN);
         if (id !== req.body.phone)
-            return res.status(constant_1.STATUS_CODE.UNAUTHORIZED).send({ code: "tokenInvalid" });
+            return res.send({ code: "tokenInvalid" });
     }
     catch (_err) {
-        res.status(constant_1.STATUS_CODE.UNAUTHORIZED).send({ code: "tokenInvalid" });
+        res.send({ code: "tokenInvalid" });
     }
     // check if the student is already registered
     const student = yield Student_1.default.findOne({ phone: req.body.phone });
     if (!student)
         return res.json({ code: "notRegistered" });
     // update the student
-    return res.status(constant_1.STATUS_CODE.SUCCESS).send({
+    return res.send({
         code: constant_1.SUCCESS_CODE,
         student: yield Student_1.default.findOneAndUpdate({ phone: req.body.phone }, req.body, { new: true }),
     });
