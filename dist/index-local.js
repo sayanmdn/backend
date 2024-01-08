@@ -12,6 +12,7 @@ const auth_1 = __importDefault(require("./routes/auth"));
 const private_1 = __importDefault(require("./routes/private"));
 const teachers_1 = __importDefault(require("./routes/teachers"));
 const students_1 = __importDefault(require("./routes/students"));
+const constant_1 = require("./constant");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
@@ -22,7 +23,7 @@ app.use("/post", private_1.default);
 app.use("/teachers", teachers_1.default);
 app.use("/students", students_1.default);
 app.get("/", (req, res) => {
-    res.send("Welcome! This is the portfolio backend v2");
+    res.send((0, constant_1.DEFAULT_SERVER_RESPONSE)(req));
 });
 const username = process.env.MONGO_USERNAME;
 const mongo_password = process.env.MONGO_PASSWORD;

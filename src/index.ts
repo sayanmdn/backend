@@ -8,6 +8,7 @@ import authRouter from "./routes/auth";
 import postRoute from "./routes/private";
 import teachersRouter from "./routes/teachers";
 import studentRouter from "./routes/students";
+import { DEFAULT_SERVER_RESPONSE } from "./constant";
 
 dotenv.config();
 
@@ -21,7 +22,7 @@ app.use("/teachers", teachersRouter);
 app.use("/students", studentRouter);
 
 app.get("/", (req, res) => {
-  res.send("Welcome! This is the portfolio backend v2");
+  res.send(DEFAULT_SERVER_RESPONSE(req));
 });
 
 const username: string | undefined = process.env.MONGO_USERNAME;

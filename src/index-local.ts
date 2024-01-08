@@ -7,6 +7,7 @@ import authRouter from "./routes/auth";
 import postRoute from "./routes/private";
 import teachersRouter from "./routes/teachers";
 import studentRouter from "./routes/students";
+import { DEFAULT_SERVER_RESPONSE } from "./constant";
 
 dotenv.config();
 
@@ -20,8 +21,8 @@ app.use("/post", postRoute);
 app.use("/teachers", teachersRouter);
 app.use("/students", studentRouter);
 
-app.get("/", (_req, res) => {
-  res.send(`Cheers ${_req.headers.host}! You're now in the realm of Core Backend <b>v2.1.0</b>`);
+app.get("/", (req, res) => {
+  res.send(DEFAULT_SERVER_RESPONSE(req));
 });
 
 const username: string | undefined = process.env.MONGO_USERNAME;
