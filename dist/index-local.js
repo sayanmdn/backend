@@ -22,8 +22,8 @@ app.use("/user", auth_1.default);
 app.use("/post", private_1.default);
 app.use("/teachers", teachers_1.default);
 app.use("/students", students_1.default);
-app.get("/", (req, res) => {
-    res.send((0, constant_1.DEFAULT_SERVER_RESPONSE)(req));
+app.get("/", (_req, res) => {
+    res.send(constant_1.DEFAULT_SERVER_RESPONSE);
 });
 const username = process.env.MONGO_USERNAME;
 const mongo_password = process.env.MONGO_PASSWORD;

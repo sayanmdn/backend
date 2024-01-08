@@ -21,8 +21,8 @@ app.use("/post", postRoute);
 app.use("/teachers", teachersRouter);
 app.use("/students", studentRouter);
 
-app.get("/", (req, res) => {
-  res.send(DEFAULT_SERVER_RESPONSE(req));
+app.get("/", (_req, res) => {
+  res.send(DEFAULT_SERVER_RESPONSE);
 });
 
 const username: string | undefined = process.env.MONGO_USERNAME;
