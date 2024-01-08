@@ -15,14 +15,16 @@ router.post("/find", async (req: Request, res: Response) => {
 
   // return all the users whole have role = TEACHER_USER_ROLE and name or subject matches the given data
   try {
-    const returnedData = await userModel.find({
-      $and: [
-        {
-          $or: [{ name: { $regex: new RegExp(data, "i") } }, { subjects: { $regex: new RegExp(data, "i") } }],
-        },
-        { role: TEACHER_USER_ROLE },
-      ],
-    });
+    const returnedData = await userModel
+      .find({
+        $and: [
+          {
+            $or: [{ name: { $regex: new RegExp(data, "i") } }, { subjects: { $regex: new RegExp(data, "i") } }],
+          },
+          { role: TEACHER_USER_ROLE },
+        ],
+      })
+      .sort({ profileViews: 1 });
 
     // remove password and phone from the returned data
     for (const obj of returnedData) {
