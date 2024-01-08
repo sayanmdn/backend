@@ -26,14 +26,16 @@ router.post("/find", (req, res) => __awaiter(void 0, void 0, void 0, function* (
         return res.status(400).send({ code: "empty" });
     // return all the users whole have role = TEACHER_USER_ROLE and name or subject matches the given data
     try {
-        const returnedData = yield User_1.default.find({
+        const returnedData = yield User_1.default
+            .find({
             $and: [
                 {
                     $or: [{ name: { $regex: new RegExp(data, "i") } }, { subjects: { $regex: new RegExp(data, "i") } }],
                 },
                 { role: constant_1.TEACHER_USER_ROLE },
             ],
-        });
+        })
+            .sort({ profileViews: 1 });
         // remove password and phone from the returned data
         for (const obj of returnedData) {
             obj.password = null;
