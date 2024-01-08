@@ -20,8 +20,8 @@ app.use("/post", postRoute);
 app.use("/teachers", teachersRouter);
 app.use("/students", studentRouter);
 
-app.get("/", (req, res) => {
-  res.send("Welcome! This is the portfolio backend v2");
+app.get("/", (_req, res) => {
+  res.send(`Cheers ${_req.headers.host}! You're now in the realm of Core Backend <b>v2.1.0</b>`);
 });
 
 const username: string | undefined = process.env.MONGO_USERNAME;
