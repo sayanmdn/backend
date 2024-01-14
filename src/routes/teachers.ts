@@ -1,8 +1,11 @@
 import { Request, Response, Router } from "express";
 import userModel, { IUser } from "../models/User";
+import visitedProfilesModel from "../models/VisitedProfiles";
 import { isEmpty } from "lodash";
 import jwt from "jsonwebtoken";
 import { TEACHER_USER_ROLE } from "../constant";
+import { getVisitedTeachersCount } from "../services/visitedProfiles";
+import StudentModel from "../models/Student";
 
 const router = Router();
 
@@ -28,8 +31,8 @@ router.post("/find", async (req: Request, res: Response) => {
 
     // remove password and phone from the returned data
     for (const obj of returnedData) {
-      obj.password = null;
-      obj.phone = null;
+      obj.password = undefined;
+      obj.phone = undefined;
     }
 
     // return the data
@@ -53,12 +56,12 @@ router.post("/findById", async (req: Request, res: Response) => {
   // return the user with the given id
   try {
     // fetch the user with the given id
-    const returnedData = (await userModel.findOne({ _id })) as IUser | null;
+    const { _doc: returnedData } = (await userModel.findOne({ _id })) as Record<string, Record<string, unknown>>;
 
     if (!returnedData) return res.status(400).send({ code: "notFound" });
 
     // remove password from the returned data
-    returnedData.password = null;
+    returnedData.password = undefined;
 
     // increment the profileViews by 1
     await userModel.updateOne({ _id: returnedData._id }, { $inc: { profileViews: 1 } });
@@ -66,18 +69,35 @@ router.post("/findById", async (req: Request, res: Response) => {
     // check if token is received and valid
     if (token) {
       try {
-        jwt.verify(token, process.env.SECRET_JWT_TOKEN);
+        const { id: studentPhone } = jwt.verify(token, process.env.SECRET_JWT_TOKEN) as { id: string };
+        const student = (await StudentModel.findOne({ phone: studentPhone })) as IUser;
+
+        // push the visited profile to the database when the user is not the same
+        if (returnedData._id !== student._id) {
+          await visitedProfilesModel.create({
+            teacherProfileId: returnedData._id,
+            studentProfileId: student._id,
+            studentPhone: returnedData.phone,
+          });
+        }
+
+        // check how many times the user has visited the teacher's profiles in last 24 hours
+        const visitedProfiles = await getVisitedTeachersCount(student._id);
+
+        if (visitedProfiles > 5)
+          return res.status(200).send({ ...returnedData, phone: undefined, numberOfvisitedProfiles: visitedProfiles });
+
+        // console.log("returnedData", returnedData);
 
         // return the data with phone
-        return res.status(200).send(returnedData);
-      } catch (_err) {}
+        return res.status(200).send({ ...returnedData, numberOfvisitedProfiles: visitedProfiles });
+      } catch (err) {
+        console.log(err);
+      }
     }
 
-    // delete the phone from the returned data
-    returnedData.phone = null;
-
     // return the data
-    return res.status(200).send(returnedData);
+    return res.status(200).send({ ...returnedData, numberOfvisitedProfiles: undefined, phone: undefined });
   } catch (err) {
     res.status(400).send("Error" + err);
   }
