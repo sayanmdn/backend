@@ -3,7 +3,7 @@ import userModel, { IUser } from "../models/User";
 import visitedProfilesModel from "../models/VisitedProfiles";
 import { isEmpty } from "lodash";
 import jwt from "jsonwebtoken";
-import { TEACHER_USER_ROLE } from "../constant";
+import { ADMIN_PHONE_NUMBERS, TEACHER_USER_ROLE } from "../constant";
 import { getVisitedTeachersCount } from "../services/visitedProfiles";
 import StudentModel from "../models/Student";
 
@@ -84,10 +84,8 @@ router.post("/findById", async (req: Request, res: Response) => {
         // check how many times the user has visited the teacher's profiles in last 24 hours
         const visitedProfiles = await getVisitedTeachersCount(student._id);
 
-        if (visitedProfiles > 5)
+        if (visitedProfiles > 5 && !ADMIN_PHONE_NUMBERS.includes(student.phone))
           return res.status(200).send({ ...returnedData, phone: undefined, numberOfvisitedProfiles: visitedProfiles });
-
-        // console.log("returnedData", returnedData);
 
         // return the data with phone
         return res.status(200).send({ ...returnedData, numberOfvisitedProfiles: visitedProfiles });
