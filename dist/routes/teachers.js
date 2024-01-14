@@ -14,9 +14,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const User_1 = __importDefault(require("../models/User"));
+const VisitedProfiles_1 = __importDefault(require("../models/VisitedProfiles"));
 const lodash_1 = require("lodash");
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const constant_1 = require("../constant");
+const visitedProfiles_1 = require("../services/visitedProfiles");
+const Student_1 = __importDefault(require("../models/Student"));
 const router = (0, express_1.Router)();
 // seacrhes for the teachers with the given name or subject
 router.post("/find", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -38,8 +41,8 @@ router.post("/find", (req, res) => __awaiter(void 0, void 0, void 0, function* (
             .sort({ profileViews: 1 });
         // remove password and phone from the returned data
         for (const obj of returnedData) {
-            obj.password = null;
-            obj.phone = null;
+            obj.password = undefined;
+            obj.phone = undefined;
         }
         // return the data
         if (returnedData)
@@ -61,26 +64,39 @@ router.post("/findById", (req, res) => __awaiter(void 0, void 0, void 0, functio
     // return the user with the given id
     try {
         // fetch the user with the given id
-        const returnedData = (yield User_1.default.findOne({ _id }));
+        const { _doc: returnedData } = (yield User_1.default.findOne({ _id }));
         if (!returnedData)
             return res.status(400).send({ code: "notFound" });
         // remove password from the returned data
-        returnedData.password = null;
+        returnedData.password = undefined;
         // increment the profileViews by 1
         yield User_1.default.updateOne({ _id: returnedData._id }, { $inc: { profileViews: 1 } });
         // check if token is received and valid
         if (token) {
             try {
-                jsonwebtoken_1.default.verify(token, process.env.SECRET_JWT_TOKEN);
+                const { id: studentPhone } = jsonwebtoken_1.default.verify(token, process.env.SECRET_JWT_TOKEN);
+                const student = (yield Student_1.default.findOne({ phone: studentPhone }));
+                // push the visited profile to the database when the user is not the same
+                if (returnedData._id !== student._id) {
+                    yield VisitedProfiles_1.default.create({
+                        teacherProfileId: returnedData._id,
+                        studentProfileId: student._id,
+                        studentPhone: returnedData.phone,
+                    });
+                }
+                // check how many times the user has visited the teacher's profiles in last 24 hours
+                const visitedProfiles = yield (0, visitedProfiles_1.getVisitedTeachersCount)(student._id);
+                if (visitedProfiles > 5 && !constant_1.ADMIN_PHONE_NUMBERS.includes(student.phone))
+                    return res.status(200).send(Object.assign(Object.assign({}, returnedData), { phone: undefined, numberOfvisitedProfiles: visitedProfiles }));
                 // return the data with phone
-                return res.status(200).send(returnedData);
+                return res.status(200).send(Object.assign(Object.assign({}, returnedData), { numberOfvisitedProfiles: visitedProfiles }));
             }
-            catch (_err) { }
+            catch (err) {
+                console.log(err);
+            }
         }
-        // delete the phone from the returned data
-        returnedData.phone = null;
         // return the data
-        return res.status(200).send(returnedData);
+        return res.status(200).send(Object.assign(Object.assign({}, returnedData), { numberOfvisitedProfiles: undefined, phone: undefined }));
     }
     catch (err) {
         res.status(400).send("Error" + err);
