@@ -5,7 +5,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const dotenv_1 = __importDefault(require("dotenv"));
 const express_1 = __importDefault(require("express"));
-const body_parser_1 = __importDefault(require("body-parser"));
 const cors_1 = __importDefault(require("cors"));
 const mongoose_1 = require("mongoose");
 const auth_1 = __importDefault(require("./routes/auth"));
@@ -16,7 +15,7 @@ const constant_1 = require("./constant");
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
-app.use(body_parser_1.default.json());
+app.use(express_1.default.json());
 const port = 8080;
 app.use("/user", auth_1.default);
 app.use("/post", private_1.default);

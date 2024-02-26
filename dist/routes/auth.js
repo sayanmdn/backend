@@ -50,11 +50,6 @@ const openai_1 = __importDefault(require("openai"));
 const lodash_1 = require("lodash");
 const constant_1 = require("../constant");
 const newsapi = new newsapi_1.default("8c4fe58fb02945eb9469d8859addd041");
-aws_sdk_1.default.config.update({
-    accessKeyId: process.env.AWS_ACCESSKEY,
-    secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
-    region: "ap-southeast-1",
-});
 const router = express_1.default.Router();
 const serializeFunction = (inputArray) => {
     return inputArray.map(({ subject, selectedFromRange, selectedToRange }) => ({
@@ -166,9 +161,6 @@ router.post("/login", (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
     if (!userByEmail)
         return res.status(400).send("Email does not exist");
-    // hash passwords
-    const salt = yield bcryptjs_1.default.genSalt(10);
-    const hashedPassword = yield bcryptjs_1.default.hash(req.body.password, salt);
     const validPass = yield bcryptjs_1.default.compare(req.body.password, userByEmail.password);
     if (!validPass)
         return res.status(400).send("Invalid password");
@@ -237,7 +229,7 @@ router.post("/otpsend", (req, res) => __awaiter(void 0, void 0, void 0, function
                 });
             }
             const rand = Math.floor(100000 + Math.random() * 900000);
-            // create a new instance of the AWS.SES
+            // to create a new instance of the AWS.SNS
             aws_sdk_1.default.config.update({
                 accessKeyId: process.env.AWS_ACCESSKEY,
                 secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
@@ -291,7 +283,7 @@ router.post("/otpsend", (req, res) => __awaiter(void 0, void 0, void 0, function
             email: req.body.email,
             otp: rand.toString(),
         });
-        // create a new instance of the AWS.SES
+        // to create a new instance of the AWS.SES
         aws_sdk_1.default.config.update({
             accessKeyId: process.env.AWS_ACCESSKEY,
             secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
