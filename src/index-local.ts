@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 import express from "express";
-import bodyParser from "body-parser";
 import cors from "cors";
 import { connect, Connection, connection } from "mongoose";
 import authRouter from "./routes/auth";
@@ -13,7 +12,7 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 const port = 8080;
 
 app.use("/user", authRouter);

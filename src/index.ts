@@ -2,7 +2,6 @@ import express from "express";
 import serverless from "serverless-http";
 import { connect } from "mongoose";
 import dotenv from "dotenv";
-import bodyParser from "body-parser";
 import cors from "cors";
 import authRouter from "./routes/auth";
 import postRoute from "./routes/private";
@@ -14,7 +13,7 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
 app.use("/user", authRouter);
 app.use("/post", postRoute);

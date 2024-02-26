@@ -16,12 +16,6 @@ import { STUDENT_USER_ROLE, TEACHER_USER_ROLE } from "../constant";
 
 const newsapi = new NewsAPI("8c4fe58fb02945eb9469d8859addd041");
 
-aws.config.update({
-  accessKeyId: process.env.AWS_ACCESSKEY,
-  secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
-  region: "ap-southeast-1",
-});
-
 const router = express.Router();
 
 interface OriginalFormat {
@@ -151,10 +145,6 @@ router.post("/login", async (req: Request, res: Response) => {
 
   if (!userByEmail) return res.status(400).send("Email does not exist");
 
-  // hash passwords
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(req.body.password, salt);
-
   const validPass = await bcrypt.compare(req.body.password, userByEmail.password);
   if (!validPass) return res.status(400).send("Invalid password");
 
@@ -233,7 +223,7 @@ router.post("/otpsend", async (req: Request, res: Response) => {
 
       const rand = Math.floor(100000 + Math.random() * 900000);
 
-      // create a new instance of the AWS.SES
+      // to create a new instance of the AWS.SNS
       aws.config.update({
         accessKeyId: process.env.AWS_ACCESSKEY,
         secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
@@ -296,7 +286,7 @@ router.post("/otpsend", async (req: Request, res: Response) => {
       otp: rand.toString(),
     });
 
-    // create a new instance of the AWS.SES
+    // to create a new instance of the AWS.SES
     aws.config.update({
       accessKeyId: process.env.AWS_ACCESSKEY,
       secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
