@@ -8,9 +8,12 @@ import teachersRouter from "./routes/teachers";
 import studentRouter from "./routes/students";
 import { DEFAULT_SERVER_RESPONSE } from "./constant";
 import swaggerUi from "swagger-ui-express";
+import yaml from "yamljs";
+
+// Should only be used when updating the swagger.yml file
 // import { swaggerSpec } from "./swagger";
-const YAML = require("yamljs"); // This is for loading YAML file
-const swaggerDocument = YAML.load("./swagger.yml");
+
+const swaggerDocument = yaml.load("./swagger.yml");
 
 dotenv.config();
 
