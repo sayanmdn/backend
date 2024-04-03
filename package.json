@@ -1,8 +1,8 @@
 {
-  "name": "sharp_test",
+  "name": "my-nodejs-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "index-local.js",
   "scripts": {
     "clean": "rm -rf dist && rm -rf node_modules",
     "run-build": "node dist/index-local.js",
@@ -42,7 +42,7 @@
     "@types/sharp": "^0.30.5",
     "@types/swagger-ui-express": "^4.1.6",
     "@types/yamljs": "^0.2.34",
-    "nodemon": "^2.0.19",
+    "nodemon": "^3.1.0",
     "serverless-offline": "^12.0.4",
     "serverless-plugin-typescript": "^2.1.5",
     "ts-node": "^10.9.1",
