@@ -7,6 +7,10 @@ import postRoute from "./routes/private";
 import teachersRouter from "./routes/teachers";
 import studentRouter from "./routes/students";
 import { DEFAULT_SERVER_RESPONSE } from "./constant";
+import swaggerUi from "swagger-ui-express";
+// import { swaggerSpec } from "./swagger";
+const YAML = require("yamljs"); // This is for loading YAML file
+const swaggerDocument = YAML.load("./swagger.yml");
 
 dotenv.config();
 
@@ -23,6 +27,10 @@ app.use("/students", studentRouter);
 app.get("/", (_req, res) => {
   res.send(DEFAULT_SERVER_RESPONSE);
 });
+
+// Serve Swagger UI
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// how to render swagger ui from swagger.yml file
 
 const username: string | undefined = process.env.MONGO_USERNAME;
 const mongo_password: string | undefined = process.env.MONGO_PASSWORD;

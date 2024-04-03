@@ -1,0 +1,772 @@
+info:
+  title: Your API Title
+  version: 1.0.0
+  description: Your API description
+basePath: localhost:8080
+swagger: '2.0'
+paths:
+  /user/signup:
+    post:
+      summary: Signs up a new user
+      description: >-
+        Creates a new user account based on the provided details. Validates
+        phone number existence and OTP for teachers.
+      tags:
+        - User
+      parameters:
+        - in: body
+          name: user
+          required: true
+          description: User object containing signup details
+          schema:
+            type: object
+            required:
+              - name
+              - role
+              - password
+              - subjects (if role is "TEACHER")
+            properties:
+              name:
+                type: string
+                description: The user's full name
+              role:
+                type: string
+                enum:
+                  - STUDENT
+                  - TEACHER
+                description: The user's role (must be "STUDENT" or "TEACHER")
+              email:
+                type: string
+                description: The user's email address (optional)
+              password:
+                type: string
+                description: The user's password
+              phone:
+                type: string
+                description: The user's phone number (required if role is "TEACHER")
+              subjects:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    subject:
+                      type: string
+                      description: >-
+                        The subject the teacher teaches (trimmed and converted
+                        to uppercase)
+                description: >-
+                  An array of subjects taught by the teacher (required if role
+                  is "TEACHER")
+              subjectClasses:
+                type: object
+                description: Class details related to the subjects (optional)
+              college:
+                type: string
+                description: The user's college (optional)
+              subjectEnrolled:
+                type: string
+                description: The subject the user is enrolled in (optional)
+              degreeEnrolled:
+                type: string
+                description: The degree program the user is enrolled in (optional)
+      responses:
+        '200':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Response code ("userCreated")
+                  message:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: The ID of the created user
+                      name:
+                        type: string
+                        description: The name of the created user
+  /user/login:
+    post:
+      summary: Logs in a user
+      description: >-
+        Attempts to login a user with email and password. Returns a JWT token on
+        successful login.
+      tags:
+        - User
+      parameters:
+        - in: body
+          name: user
+          required: true
+          description: User login details
+          schema:
+            type: object
+            required:
+              - email
+              - password
+            properties:
+              email:
+                type: string
+                description: The user's email address
+              password:
+                type: string
+                description: The user's password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Response code ("Loggedin")
+                  token:
+                    type: string
+                    description: JWT token for authentication
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: The user's ID
+                      name:
+                        type: string
+                        description: The user's name
+                      role:
+                        type: string
+                        description: The user's role (optional, defaults to "USER")
+        '400':
+          description: Bad request (e.g., validation error, invalid credentials)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: >-
+                      Error code ("validationFalse" or "Email does not exist" or
+                      "Invalid password")
+                  message:
+                    type: string
+                    description: Error message details
+  /user/save:
+    post:
+      summary: Saves user data
+      description: >-
+        Saves data associated with the user identified by the provided JWT
+        token.
+      tags:
+        - User
+      parameters:
+        - in: body
+          name: data
+          required: true
+          description: User data to be saved
+          schema:
+            type: object
+            required:
+              - token
+              - data
+            properties:
+              token:
+                type: string
+                description: JWT token for authentication
+              data:
+                type: object
+                description: >-
+                  The user's data to be saved (specific format depends on your
+                  dataModel)
+      responses:
+        '200':
+          description: Data saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Response code ("dataSaved")
+                  message:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: ID of the saved data entry
+        '400':
+          description: Bad request (e.g., invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Error code ("tokenNotReceived" or "tokenInvalid")
+                  message:
+                    type: string
+                    description: Error message details
+  /user/getdata:
+    post:
+      summary: Retrieves user data
+      description: >-
+        Retrieves data associated with the user identified by the provided JWT
+        token.
+      tags:
+        - User
+      parameters:
+        - in: body
+          name: data
+          required: true
+          description: User data retrieval request
+          schema:
+            type: object
+            required:
+              - token
+            properties:
+              token:
+                type: string
+                description: JWT token for authentication
+      responses:
+        '200':
+          description: Data retrieved successfully (or data not found)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    description: Array of user data objects (if data found)
+                    items:
+                      $ref: '#/components/schemas/dataModel'
+                  - type: object
+                    properties:
+                      code:
+                        type: string
+                        description: Response code ("dataNotFound")
+                      message:
+                        type: string
+                        description: Message indicating data not found
+        '400':
+          description: Bad request (e.g., invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Error code ("tokenNotReceived" or "tokenInvalid")
+                  message:
+                    type: string
+                    description: Error message details
+  /user/otpsend:
+    post:
+      summary: Sends One-Time Password (OTP) for user verification
+      description: >-
+        Sends an OTP via SMS (for teachers/students) or email for user
+        verification based on the provided role and contact details.
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - role (if sending SMS OTP)
+                - email (always required)
+              properties:
+                role:
+                  type: string
+                  description: >-
+                    User role (required for SMS OTP, must be "TEACHER_USER_ROLE"
+                    or "STUDENT_USER_ROLE")
+                email:
+                  type: string
+                  description: User's email address (required)
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Response code ("otpSent")
+                  message:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: ID of the saved OTP record
+                      email:
+                        type: string
+                        description: User's email address (if sent via email)
+        '400':
+          description: Bad request (e.g., validation error, sending error)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Error code ("validationFalse" or details from AWS error)
+                  message:
+                    type: string
+                    description: Error message details
+  /user/news:
+    get:
+      summary: Retrieves curated news summaries
+      description: >-
+        Fetches top business news headlines, summarizes and enhances them using
+        OpenAI, and returns the curated content.
+      tags:
+        - News
+      responses:
+        '200':
+          description: Curated news content retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: string
+                    description: Curated news content
+        '400':
+          description: Bad request (e.g., authentication failure)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Error code ("tokenInvalid")
+                  message:
+                    type: string
+                    description: Error message details
+  /user/write:
+    post:
+      summary: Rewrites text for better quality
+      description: >-
+        Uses OpenAI to rewrite provided text for improved quality. Requires
+        authentication.
+      tags:
+        - Writing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Text to be rewritten
+      responses:
+        '200':
+          description: Text rewritten successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                    description: Rewritten text
+        '400':
+          description: Bad request (e.g., missing token, invalid token, processing error)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: >-
+                      Error code ("tokenNotReceived", "tokenInvalid", or general
+                      error message)
+                  message:
+                    type: string
+                    description: Error message details
+  /post/isAuthenticated:
+    post:
+      summary: Checks user authentication status
+      description: >-
+        Verifies the validity of a JWT token and returns user details (if
+        student) upon successful authentication.
+      tags:
+        - User
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token valid (or details if student)
+          content:
+            application/json:
+              oneOf:
+                - schema:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        description: Response code ("tokenValid")
+                      message:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            description: User ID from the token
+                          role:
+                            type: string
+                            description: User role from the token
+                          name:
+                            type: string
+                            description: User name (only for students, fetched from DB)
+                          class:
+                            type: number
+                            description: User class (only for students, fetched from DB)
+                - schema:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        description: Response code ("tokenValid")
+                      message:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            description: User ID from the token
+                          role:
+                            type: string
+                            description: User role from the token
+        '400':
+          description: Bad request (e.g., missing token, invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Error code ("tokenNotReceived" or "tokenInvalid")
+                  message:
+                    type: string
+                    description: Error message details
+  /students/access:
+    post:
+      summary: Register student and grant access
+      description: >-
+        Registers a student (if not already registered) and grants access with a
+        JWT token after successful OTP verification.
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone
+                - otp
+              properties:
+                phone:
+                  type: string
+                  description: Student's phone number
+                otp:
+                  type: string
+                  description: One-time password sent to the student's phone
+      responses:
+        '200':
+          description: Registration and access granted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Response code ("SUCCESS_CODE")
+                  token:
+                    type: string
+                    description: Generated JWT token
+                  student:
+                    type: object
+                    description: Student object
+                    properties:
+                      _id:
+                        type: string
+                        description: Student's unique ID
+                      phone:
+                        type: string
+                        description: Student's phone number
+        '400':
+          description: Bad request (e.g., validation errors, OTP mismatch)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Error code ("validationFalse" or "OTP did not match")
+                  message:
+                    type: string
+                    description: Error message details
+  /students/update:
+    post:
+      summary: Updates student profile
+      description: >-
+        Updates a student's profile information after validating the request and
+        verifying the JWT token.
+      tags:
+        - User
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+                - phone (included for validation purposes)
+              properties:
+                token:
+                  type: string
+                  description: Student's JWT token
+                phone:
+                  type: string
+                  description: Student's phone number (included for validation)
+      responses:
+        '200':
+          description: Student profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Response code ("SUCCESS_CODE")
+                  student:
+                    type: object
+                    description: Updated student object
+                    properties:
+                      _id:
+                        type: string
+                        description: Student's unique ID
+                      phone:
+                        type: string
+                        description: Student's phone number
+        '400':
+          description: >-
+            Bad request (e.g., validation errors, invalid token, student not
+            found)
+          content:
+            application/json:
+              schema:
+                properties:
+                  code:
+                    type: string
+                    description: >-
+                      Error code ("validationFalse", "tokenInvalid",
+                      "notRegistered")
+                  message:
+                    type: string
+                    description: Error message details
+  /teachers/find:
+    post:
+      summary: Search for teachers
+      description: >-
+        Searches for teachers based on name or subjects matching the provided
+        data string (case-insensitive).
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  type: string
+                  description: >-
+                    Search term to match teacher name or subjects
+                    (case-insensitive)
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              oneOf:
+                - schema:
+                    type: array
+                    description: Array of teacher objects (excluding password and phone)
+                    items:
+                      $ref: '#/components/schemas/userModel'
+                - schema:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        description: Response code ("notFound")
+        '400':
+          description: Bad request (e.g., missing data)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Error code ("empty")
+                  message:
+                    type: string
+                    description: Error message details
+  /teachers/findById:
+    post:
+      summary: Finds a teacher by ID
+      description: >-
+        Retrieves a teacher's profile by ID, increments profileViews, and tracks
+        visited profiles (optionally).
+      tags:
+        - User
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - id
+              properties:
+                id:
+                  type: string
+                  description: ID of the teacher to retrieve
+      responses:
+        '200':
+          description: Teacher profile retrieved successfully
+          content:
+            application/json:
+              oneOf:
+                - schema:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        description: Teacher's ID
+                      name:
+                        type: string
+                        description: Teacher's name
+                      numberOfvisitedProfiles:
+                        type: number
+                        description: >-
+                          Number of teacher profiles visited by the student in
+                          the last 24 hours (if applicable)
+                - schema:
+                    type: object
+                    properties:
+                      _id:
+                        type: string
+                        description: Teacher's ID
+                      name:
+                        type: string
+                        description: Teacher's name
+        '400':
+          description: >-
+            Bad request (e.g., missing ID, invalid token, exceeded profile view
+            limit)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: Error code ("empty", "notFound", or error message)
+                  message:
+                    type: string
+                    description: Error message details
+  /teachers/list:
+    post:
+      summary: Lists teachers with pagination
+      description: >-
+        Retrieves a paginated list of teachers (users with role =
+        TEACHER_USER_ROLE), requiring a valid JWT token for authentication.
+      tags:
+        - User
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - page
+                - limit
+              properties:
+                page:
+                  type: integer
+                  description: Page number (zero-based) for pagination
+                limit:
+                  type: integer
+                  description: Number of teachers per page
+      responses:
+        '200':
+          description: Teacher list retrieved successfully
+          content:
+            application/json:
+              oneOf:
+                - schema:
+                    type: array
+                    description: Array of teacher objects (excluding password and phone)
+                    items:
+                      $ref: '#/components/schemas/userModel'
+                - schema:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        description: Response code ("notFound")
+        '400':
+          description: >-
+            Bad request (e.g., missing token, invalid token, missing pagination
+            parameters)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    description: >-
+                      Error code ("tokenNotReceived", "tokenInvalid", or
+                      "empty")
+                  message:
+                    type: string
+                    description: Error message details
+definitions: {}
+responses: {}
+parameters: {}
+securityDefinitions: {}
+tags: []

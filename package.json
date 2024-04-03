@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "clean": "rm -rf dist && rm -rf node_modules",
     "run-build": "node dist/index-local.js",
     "test": "ts-node src/index.ts",
     "dev": "ts-node-dev src/index-local.ts",
@@ -20,12 +21,15 @@
     "dotenv": "^16.3.1",
     "express": "^4.18.1",
     "joi": "^17.9.2",
+    "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.1",
     "mongodb": "^5.7.0",
     "mongoose": "^7.4.3",
     "newsapi": "^2.4.1",
     "openai": "^4.10.0",
-    "serverless-http": "^3.2.0"
+    "serverless-http": "^3.2.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0"
   },
   "devDependencies": {
     "@types/aws-sdk": "^2.7.0",
