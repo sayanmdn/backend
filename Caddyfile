@@ -1,3 +1,3 @@
-api.sayantanmishra.com {
-	reverse_proxy :8080
-}
+api2.sayantanmishra.com
+
+reverse_proxy :8080

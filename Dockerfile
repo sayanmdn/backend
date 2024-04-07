@@ -20,5 +20,5 @@ RUN npm run build
 # Expose the port your server listens on
 EXPOSE 8080
 
-# Use pm2 to start your server in detached mode
-CMD ["pm2", "--no-daemon", "dist/index-local.js"]
+# Use the exec form of CMD to start pm2 with the server process
+CMD ["pm2-runtime", "start", "dist/index-local.js"]
