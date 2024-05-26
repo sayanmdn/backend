@@ -13,7 +13,6 @@ import NewsAPI from "newsapi";
 import OpenAI from "openai";
 import { isEmpty, toUpper } from "lodash";
 import { STUDENT_USER_ROLE, TEACHER_USER_ROLE } from "../constant";
-import axios from "axios";
 
 const newsapi = new NewsAPI("8c4fe58fb02945eb9469d8859addd041");
 
@@ -222,34 +221,31 @@ router.post("/otpsend", async (req: Request, res: Response) => {
         });
       }
 
-      let rand: number = 0;
+      const rand = Math.floor(100000 + Math.random() * 900000);
 
+      // to create a new instance of the AWS.SNS
+      aws.config.update({
+        accessKeyId: process.env.AWS_ACCESSKEY,
+        secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
+        region: "ap-south-1",
+      });
+
+      const sns = new aws.SNS();
+      const processedNumber = req.body.phone.length === 10 ? "+91".concat(req.body.phone) : req.body.phone;
+
+      // Define the message parameters
+      const params = {
+        Message: "Hello, You OTP for FindMyTeahcer is " + rand,
+        PhoneNumber: processedNumber, // Recipient's phone number
+      };
+
+      // Send the SMS
       try {
-        const response = await axios.post(
-          "https://api2.sayantanmishra.com/sendotp",
-          {
-            phone: req.body.phone,
-          },
-          {
-            headers: {
-              Authorization: process.env.SENDOTP_API_KEY,
-              "Content-Type": "application/json",
-            },
-          },
-        );
-
-        if (response.status === 200) {
-          rand = response.data.otp;
-        } else {
-          return res.status(500).send({
-            code: "FAILURE",
-          });
-        }
-      } catch (e) {
-        console.log("Error in OTP sending: " + e);
-        return res.status(500).send({
-          code: "FAILURE",
-        });
+        const data = await sns.publish(params).promise();
+        console.log("SMS sent successfully:", params, data);
+      } catch (err) {
+        console.error("Error sending SMS:", err);
+        return res.status(400).send(err);
       }
 
       // save OTP in DB
