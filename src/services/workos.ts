@@ -32,12 +32,9 @@ class WorkOSService {
   } = {}) {
     this.checkInitialization();
     
-    // Always use the backend as the redirect URI for security
-    const backendRedirectUri = `${process.env.APP_URL || 'https://fy5f66hx18.execute-api.ap-south-1.amazonaws.com/dev'}/user/sso/callback`;
-    
     const authOptions: any = {
       clientId: this.clientId!,
-      redirectUri: backendRedirectUri,
+      redirectUri: options.redirectUri || `${process.env.APP_URL || 'http://localhost:3000'}/sso/callback`,
     };
 
     if (options.state) authOptions.state = options.state;
