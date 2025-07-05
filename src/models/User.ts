@@ -25,6 +25,11 @@ export interface IUser extends Document {
   subjectEnrolled?: string;
   degreeEnrolled?: string;
   profileViews?: number;
+  workosId?: string;
+  organizationId?: string;
+  connectionId?: string;
+  authProvider?: string;
+  isSSO?: boolean;
 }
 
 const userSchema: Schema<IUser> = new mongoose.Schema({
@@ -44,7 +49,7 @@ const userSchema: Schema<IUser> = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: false,
     max: 128,
     min: 8,
   },
@@ -72,6 +77,22 @@ const userSchema: Schema<IUser> = new mongoose.Schema({
   },
   profileViews: {
     type: Number,
+  },
+  workosId: {
+    type: String,
+  },
+  organizationId: {
+    type: String,
+  },
+  connectionId: {
+    type: String,
+  },
+  authProvider: {
+    type: String,
+  },
+  isSSO: {
+    type: Boolean,
+    default: false,
   },
 });
 

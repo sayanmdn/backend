@@ -20,6 +20,7 @@
     "@types/lodash": "^4.17.18",
     "@types/mongodb": "^4.0.7",
     "@types/mongoose": "^5.11.97",
+    "@workos-inc/node": "^7.57.0",
     "axios": "^1.10.0",
     "bcryptjs": "^2.4.3",
     "cheerio": "^1.1.0",

@@ -14,6 +14,7 @@ import NewsAPI from "newsapi";
 import OpenAI from "openai";
 import { isEmpty, toUpper } from "lodash";
 import { STUDENT_USER_ROLE, TEACHER_USER_ROLE } from "../constant";
+import workosService from "../services/workos";
 
 const newsapi = new NewsAPI("8c4fe58fb02945eb9469d8859addd041");
 
@@ -135,7 +136,7 @@ router.post("/login", async (req: Request, res: Response) => {
 
   const userEmail = req.body.email;
 
-  let userByEmail: { _id: string; password: string; name: string; role?: string } | undefined = undefined;
+  let userByEmail: { _id: string; password: string; name: string; role?: string; isSSO?: boolean } | undefined = undefined;
 
   // check if email already exists
   try {
@@ -145,6 +146,14 @@ router.post("/login", async (req: Request, res: Response) => {
   }
 
   if (!userByEmail) return res.status(400).send("Email does not exist");
+
+  // Check if user is SSO user
+  if (userByEmail.isSSO) {
+    return res.status(400).json({
+      code: "ssoUserError",
+      message: "This account uses SSO authentication. Please use SSO login.",
+    });
+  }
 
   const validPass = await bcrypt.compare(req.body.password, userByEmail.password);
   if (!validPass) return res.status(400).send("Invalid password");
@@ -422,6 +431,189 @@ router.post("/write", async (req: Request, res: Response) => {
     res.send({ response: chatCompletion.choices[0].message.content });
   } catch (e) {
     res.status(400).send("Unable to process the request.");
+  }
+});
+
+// SSO Routes
+router.get("/sso/authorize", async (req: Request, res: Response) => {
+  try {
+    const { state, redirect_uri } = req.query;
+    
+    const authorizationURL = workosService.getAuthorizationURL(
+      state as string,
+      redirect_uri as string
+    );
+
+    res.json({
+      code: "authorizationURL",
+      authorizationURL,
+    });
+  } catch (error) {
+    console.error("SSO authorization error:", error);
+    res.status(500).json({
+      code: "ssoError",
+      message: "Failed to generate authorization URL",
+    });
+  }
+});
+
+router.post("/sso/callback", async (req: Request, res: Response) => {
+  try {
+    const { code, state, redirect_uri } = req.body;
+
+    if (!code) {
+      return res.status(400).json({
+        code: "missingCode",
+        message: "Authorization code is required",
+      });
+    }
+
+    const authResult = await workosService.authenticateWithCode(code, redirect_uri);
+
+    if (!authResult.success) {
+      return res.status(400).json({
+        code: "authenticationFailed",
+        message: authResult.error,
+      });
+    }
+
+    const { profile } = authResult;
+
+    // Check if user exists
+    let user = await userModel.findOne({ 
+      $or: [
+        { workosId: profile.id },
+        { email: profile.email }
+      ]
+    });
+
+    if (!user) {
+      // Create new SSO user
+      user = new userModel({
+        name: profile.firstName && profile.lastName 
+          ? `${profile.firstName} ${profile.lastName}` 
+          : profile.email.split("@")[0],
+        email: profile.email,
+        password: "", // No password for SSO users
+        workosId: profile.id,
+        organizationId: profile.organizationId,
+        connectionId: profile.connectionId,
+        authProvider: profile.connectionType,
+        isSSO: true,
+        role: "USER", // Default role for SSO users
+      });
+
+      await user.save();
+    } else if (!user.isSSO) {
+      // Update existing non-SSO user to SSO
+      user.workosId = profile.id;
+      user.organizationId = profile.organizationId;
+      user.connectionId = profile.connectionId;
+      user.authProvider = profile.connectionType;
+      user.isSSO = true;
+      
+      await user.save();
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        id: user._id, 
+        name: user.name, 
+        role: user.role || "USER",
+        isSSO: true
+      },
+      process.env.SECRET_JWT_TOKEN!,
+    );
+
+    res.json({
+      code: "ssoLoginSuccess",
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role || "USER",
+        isSSO: true,
+        organization: profile.organizationId,
+        authProvider: profile.connectionType,
+      },
+    });
+  } catch (error) {
+    console.error("SSO callback error:", error);
+    res.status(500).json({
+      code: "ssoCallbackError",
+      message: "Failed to process SSO callback",
+    });
+  }
+});
+
+router.get("/sso/profile", async (req: Request, res: Response) => {
+  try {
+    const { authorization: token } = req.headers;
+
+    if (!token) {
+      return res.status(401).json({
+        code: "tokenNotReceived",
+        message: "Authorization token is required",
+      });
+    }
+
+    const { id: userId } = jwt.verify(token, process.env.SECRET_JWT_TOKEN!) as { id: string };
+    
+    const user = await userModel.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        code: "userNotFound",
+        message: "User not found",
+      });
+    }
+
+    res.json({
+      code: "profileRetrieved",
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role || "USER",
+        isSSO: user.isSSO,
+        organization: user.organizationId,
+        authProvider: user.authProvider,
+      },
+    });
+  } catch (error) {
+    console.error("SSO profile error:", error);
+    res.status(500).json({
+      code: "profileError",
+      message: "Failed to retrieve profile",
+    });
+  }
+});
+
+router.get("/sso/connections", async (req: Request, res: Response) => {
+  try {
+    const { organization_id } = req.query;
+
+    const connectionsResult = await workosService.listConnections(organization_id as string);
+
+    if (!connectionsResult.success) {
+      return res.status(400).json({
+        code: "connectionsError",
+        message: connectionsResult.error,
+      });
+    }
+
+    res.json({
+      code: "connectionsRetrieved",
+      connections: connectionsResult.connections,
+    });
+  } catch (error) {
+    console.error("SSO connections error:", error);
+    res.status(500).json({
+      code: "connectionsError",
+      message: "Failed to retrieve connections",
+    });
   }
 });
 
