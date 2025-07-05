@@ -7,7 +7,8 @@ import getMessageHTML from "../assets/otpEmail";
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import aws from "aws-sdk";
+import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
+import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
 import * as userValidation from "../validation/user";
 import NewsAPI from "newsapi";
 import OpenAI from "openai";
@@ -223,26 +224,27 @@ router.post("/otpsend", async (req: Request, res: Response) => {
 
       const rand = Math.floor(100000 + Math.random() * 900000);
 
-      // to create a new instance of the AWS.SNS
-      aws.config.update({
-        accessKeyId: process.env.AWS_ACCESSKEY,
-        secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
+      // Create SNS client
+      const snsClient = new SNSClient({
         region: "ap-south-1",
+        credentials: {
+          accessKeyId: process.env.AWS_ACCESSKEY!,
+          secretAccessKey: process.env.AWS_SECRET_ACCESSKEY!,
+        },
       });
 
-      const sns = new aws.SNS();
       const processedNumber = req.body.phone.length === 10 ? "+91".concat(req.body.phone) : req.body.phone;
 
       // Define the message parameters
-      const params = {
+      const publishCommand = new PublishCommand({
         Message: "Hello, You OTP for FindMyTeahcer is " + rand,
         PhoneNumber: processedNumber, // Recipient's phone number
-      };
+      });
 
       // Send the SMS
       try {
-        const data = await sns.publish(params).promise();
-        console.log("SMS sent successfully:", params, data);
+        const data = await snsClient.send(publishCommand);
+        console.log("SMS sent successfully:", { PhoneNumber: processedNumber, MessageId: data.MessageId });
       } catch (err) {
         console.error("Error sending SMS:", err);
         return res.status(400).send(err);
@@ -287,16 +289,16 @@ router.post("/otpsend", async (req: Request, res: Response) => {
       otp: rand.toString(),
     });
 
-    // to create a new instance of the AWS.SES
-    aws.config.update({
-      accessKeyId: process.env.AWS_ACCESSKEY,
-      secretAccessKey: process.env.AWS_SECRET_ACCESSKEY,
+    // Create SES client
+    const sesClient = new SESClient({
       region: "ap-southeast-1",
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESSKEY!,
+        secretAccessKey: process.env.AWS_SECRET_ACCESSKEY!,
+      },
     });
 
-    const ses = new aws.SES({ apiVersion: "2010-12-01" });
-
-    const params = {
+    const sendEmailCommand = new SendEmailCommand({
       Destination: {
         ToAddresses: [req.body.email],
       },
@@ -313,12 +315,11 @@ router.post("/otpsend", async (req: Request, res: Response) => {
         },
       },
       Source: "info@mail.sayantanmishra.com",
-    };
-
-    const sendEmail = ses.sendEmail(params).promise();
+    });
 
     try {
-      await sendEmail;
+      const result = await sesClient.send(sendEmailCommand);
+      console.log("Email sent successfully:", { MessageId: result.MessageId });
     } catch (error) {
       console.log(error);
     }

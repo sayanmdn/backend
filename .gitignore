@@ -5,3 +5,5 @@ package-lock.json
 .serverless
 .build
 env.json
+/dist
+.idea
