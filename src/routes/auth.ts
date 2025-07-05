@@ -437,12 +437,16 @@ router.post("/write", async (req: Request, res: Response) => {
 // SSO Routes
 router.get("/sso/authorize", async (req: Request, res: Response) => {
   try {
-    const { state, redirect_uri } = req.query;
+    const { state, redirect_uri, provider, domain, organization, connection } = req.query;
     
-    const authorizationURL = workosService.getAuthorizationURL(
-      state as string,
-      redirect_uri as string
-    );
+    const authorizationURL = workosService.getAuthorizationURL({
+      state: state as string,
+      redirectUri: redirect_uri as string,
+      provider: provider as string,
+      domain: domain as string,
+      organization: organization as string,
+      connection: connection as string,
+    });
 
     res.json({
       code: "authorizationURL",

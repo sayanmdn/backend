@@ -22,13 +22,28 @@ class WorkOSService {
     }
   }
 
-  getAuthorizationURL(state?: string, redirectURI?: string) {
+  getAuthorizationURL(options: {
+    state?: string;
+    redirectUri?: string;
+    provider?: string;
+    domain?: string;
+    organization?: string;
+    connection?: string;
+  } = {}) {
     this.checkInitialization();
-    return this.workos!.sso.getAuthorizationUrl({
+    
+    const authOptions: any = {
       clientId: this.clientId!,
-      redirectUri: redirectURI || `${process.env.APP_URL || 'http://localhost:3000'}/auth/callback`,
-      state: state,
-    });
+      redirectUri: options.redirectUri || `${process.env.APP_URL || 'http://localhost:3000'}/auth/callback`,
+    };
+
+    if (options.state) authOptions.state = options.state;
+    if (options.provider) authOptions.provider = options.provider;
+    if (options.domain) authOptions.domain = options.domain;
+    if (options.organization) authOptions.organization = options.organization;
+    if (options.connection) authOptions.connection = options.connection;
+
+    return this.workos!.sso.getAuthorizationUrl(authOptions);
   }
 
   async authenticateWithCode(code: string, redirectURI?: string) {
